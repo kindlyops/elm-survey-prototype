@@ -1,0 +1,24 @@
+{
+  "name": "elm-survey-prototype",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "elm-make Main.elm",
+    "start": "elm-live Main.elm --open"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kindlyops/elm-survey-prototype.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kindlyops/elm-survey-prototype/issues"
+  },
+  "homepage": "https://github.com/kindlyops/elm-survey-prototype#readme",
+  "devDependencies": {
+    "elm": "^0.18.0",
+    "elm-live": "^2.7.5"
+  }
+}
