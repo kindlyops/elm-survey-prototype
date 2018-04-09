@@ -12,4 +12,4 @@
 
 ## Demo Gif
 
-[[ https://github.com/kindlyops/elm-survey-prototype/raw/master/demo.gif | height = 100px ]]
+![Demo Gif](https://github.com/kindlyops/elm-survey-prototype/raw/master/demo.gif)
