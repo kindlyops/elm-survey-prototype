@@ -350,17 +350,75 @@ viewInstructions model =
 
 viewFinished : Model -> Element Styles variation Msg
 viewFinished model =
-    column None
-        []
-        (viewFinishedQuestions model.survey.questions)
-
-
-viewFinishedQuestions questions =
-    List.map
-        (\question ->
-            h1 None [] (Element.text question.title)
+    Element.html
+        (Html.table []
+            (viewFinishedTableHeader :: viewFinishedTableRows model.survey.questions)
         )
-        (Zipper.toList questions)
+
+
+viewFinishedTableHeader =
+    Html.tr []
+        [ Html.td [] [ Html.text "Question" ]
+        , Html.td [] [ Html.text "Answer" ]
+        , Html.td [] [ Html.text "Group" ]
+        , Html.td [] [ Html.text "Points" ]
+        ]
+
+
+viewFinishedTableRows : Zipper Question -> List (Html.Html Msg)
+viewFinishedTableRows questions =
+    let
+        outputRows =
+            generateOutputRows (Zipper.toList questions)
+    in
+        viewOutputRows outputRows
+
+
+type alias OutputRow =
+    { question : String
+    , answer : String
+    , group : String
+    , pointsAssigned : String
+    }
+
+
+generateOutputRows : List Question -> List OutputRow
+generateOutputRows questions =
+    let
+        mapped =
+            List.map
+                (\question ->
+                    List.map
+                        (\answer ->
+                            List.map
+                                (\pointsAssigned ->
+                                    { question = question.title
+                                    , answer = (toString question.id) ++ "-" ++ (toString answer.id)
+                                    , group = (toString pointsAssigned.group)
+                                    , pointsAssigned = (toString pointsAssigned.points)
+                                    }
+                                )
+                                answer.pointsAssigned
+                        )
+                        question.answers
+                )
+                questions
+    in
+        mapped |> List.concat |> List.concat
+
+
+viewOutputRows : List OutputRow -> List (Html.Html Msg)
+viewOutputRows outputRows =
+    List.map
+        (\row ->
+            Html.tr []
+                [ Html.td [] [ Html.text row.question ]
+                , Html.td [] [ Html.text row.answer ]
+                , Html.td [] [ Html.text row.group ]
+                , Html.td [] [ Html.text row.pointsAssigned ]
+                ]
+        )
+        outputRows
 
 
 viewSurvey : Model -> Element Styles variation Msg
