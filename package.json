@@ -4,8 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "elm-make Main.elm",
-    "start": "elm-live Main.elm --open"
+    "build": "elm-make Main.elm --output=build.js",
+    "start": "elm-live Main.elm --output=build.js --open"
   },
   "repository": {
     "type": "git",
