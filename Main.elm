@@ -5,6 +5,10 @@ import Element.Attributes exposing (..)
 import Element.Events exposing (..)
 import Element.Input as Input exposing (..)
 import Html
+import Ports
+import RadarChart exposing (RadarChartConfig, generateChartConfig)
+import Html.Attributes
+import Html.Events
 import List.Zipper as Zipper exposing (..)
 import Data as Data exposing (..)
 import StyleSheet exposing (..)
@@ -59,6 +63,7 @@ type Msg
     | GoToInstructions
     | ChangeNumberOfGroups String
     | FinishSurvey
+    | GenerateChart
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -66,6 +71,9 @@ update msg model =
     case msg of
         NoOp ->
             model ! []
+
+        GenerateChart ->
+            ( model, Ports.radarChart (RadarChart.generateChartConfig model.survey) )
 
         ChangeNumberOfGroups number ->
             let
@@ -312,6 +320,8 @@ view model =
         column Main
             []
             [ viewHeader
+
+            --, viewTest model
             , case model.currentPage of
                 Instructions ->
                     viewInstructions model
@@ -322,6 +332,13 @@ view model =
                 Finished ->
                     viewFinished model
             ]
+
+
+
+--viewTest : Model -> Element Styles variation Msg
+--viewTest model =
+--    Element.html
+--        (Html.div [ Html.Attributes.style [ ( "width", "40%" ) ] ] [ Html.canvas [ Html.Attributes.id "chart" ] [] ])
 
 
 viewInstructions : Model -> Element Styles variation Msg
@@ -355,9 +372,20 @@ viewInstructions model =
 viewFinished : Model -> Element Styles variation Msg
 viewFinished model =
     Element.html
-        (Html.table []
-            (viewFinishedTableHeader :: viewFinishedTableRows model.survey.questions)
+        (Html.div []
+            [ viewChart model
+            , Html.table []
+                (viewFinishedTableHeader :: viewFinishedTableRows model.survey.questions)
+            ]
         )
+
+
+viewChart : Model -> Html.Html Msg
+viewChart model =
+    Html.div []
+        [ Html.button [ Html.Events.onClick GenerateChart ] [ Html.text "Click to generate radar chart" ]
+        , Html.div [ Html.Attributes.style [ ( "width", "40%" ) ] ] [ Html.canvas [ Html.Attributes.id "chart" ] [] ]
+        ]
 
 
 viewFinishedTableHeader =
