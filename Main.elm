@@ -133,19 +133,23 @@ update msg model =
             in
                 { model | survey = newSurvey } ! []
 
-        DecrementAnswer answer group ->
-            --if points for this answer is > 0, then decrement the point in this answer and increment the points left for the group
+        DecrementAnswer answer groupNumber ->
+            --if points for this answer is > 0,
+            --then decrement the point in this answer and
+            --increment the points left for the group
             let
                 newModel =
-                    decrementAnswer model answer group
+                    decrementAnswer model answer groupNumber
             in
                 newModel ! []
 
-        IncrementAnswer answer group ->
-            --    --if points left in group > 0, then increment the point in the group for this answer and decrement the points assigned for the group
+        IncrementAnswer answer groupNumber ->
+            --    --if points left in group > 0,
+            --then increment the point in the group for
+            --this answer and decrement the points assigned for the group
             let
                 newModel =
-                    incrementAnswer model answer group
+                    incrementAnswer model answer groupNumber
             in
                 newModel ! []
 
@@ -324,7 +328,7 @@ viewInstructions : Model -> Element Styles variation Msg
 viewInstructions model =
     column None
         [ center, spacing 20, paddingTop 20 ]
-        [ h1 None [] (Element.text "Welcome to the Elm Survey Prototype. There are currently 2 surveys to choose from.")
+        [ h1 None [] (Element.text "Welcome to the Elm Ipsative Survey Prototype. There are currently 2 surveys to choose from.")
         , h2 None [] (Element.text model.survey.metaData.name)
         , h2 None [] (Element.text ("Last Updated: " ++ model.survey.metaData.lastUpdated))
         , h2 None [] (Element.text ("Created By: " ++ model.survey.metaData.createdBy))
@@ -435,7 +439,7 @@ viewHeader : Element Styles variation Msg
 viewHeader =
     row NavBarStyle
         [ spread, paddingXY 80 20 ]
-        [ el Logo [] (Element.text "Elm Survey Prototype")
+        [ el Logo [] (Element.text "Elm Ipsative Survey Prototype")
         , row None
             [ spacing 20, verticalCenter ]
             [ el NavOption [] (Element.text "Instructions")
