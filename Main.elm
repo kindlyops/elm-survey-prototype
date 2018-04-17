@@ -6,11 +6,12 @@ import Element.Events exposing (..)
 import Element.Input as Input exposing (..)
 import Html
 import Ports
-import RadarChart exposing (RadarChartConfig, generateChartConfig)
+import RadarChart exposing (RadarChartConfig, generateIpsativeChart)
 import Html.Attributes
 import Html.Events
+import DemoData as DemoData exposing (scdsSurveyData, scdsMetaData, scdsQuestions, forceSurveyData)
 import List.Zipper as Zipper exposing (..)
-import Data as Data exposing (..)
+import Survey as Survey exposing (..)
 import StyleSheet exposing (..)
 
 
@@ -36,7 +37,8 @@ type Page
 
 
 type alias Model =
-    { survey : Data.Survey
+    { currentSurvey : Survey.Survey
+    , availableSurveys : List Survey.Survey
     , currentPage : Page
     , numberOfGroups : Int
     }
@@ -44,9 +46,10 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { survey = Data.surveyData
+    ( { currentSurvey = DemoData.scdsSurveyData
+      , availableSurveys = [ DemoData.scdsSurveyData, DemoData.forceSurveyData ]
       , currentPage = Instructions
-      , numberOfGroups = 3
+      , numberOfGroups = 2
       }
     , Cmd.none
     )
@@ -54,16 +57,26 @@ init =
 
 type Msg
     = NoOp
-    | StartSurvey
-    | StartSurveyWithGroups Int
-    | IncrementAnswer Answer Int
-    | DecrementAnswer Answer Int
+    | StartLikertSurvey
+    | StartIpsativeSurvey Int
+    | IncrementAnswer IpsativeAnswer Int
+    | DecrementAnswer IpsativeAnswer Int
     | NextQuestion
     | PreviousQuestion
     | GoToInstructions
     | ChangeNumberOfGroups String
     | FinishSurvey
     | GenerateChart
+
+
+limitNumberOfGroups : Int -> Int
+limitNumberOfGroups input =
+    if input < 0 then
+        1
+    else if input > 3 then
+        3
+    else
+        input
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
@@ -73,12 +86,17 @@ update msg model =
             model ! []
 
         GenerateChart ->
-            ( model, Ports.radarChart (RadarChart.generateChartConfig model.survey) )
+            case model.currentSurvey of
+                Ipsative survey ->
+                    ( model, Ports.radarChart (RadarChart.generateIpsativeChart survey) )
+
+                _ ->
+                    model ! []
 
         ChangeNumberOfGroups number ->
             let
                 newNumber =
-                    String.toInt number |> Result.toMaybe |> Maybe.withDefault model.numberOfGroups
+                    String.toInt number |> Result.toMaybe |> Maybe.withDefault model.numberOfGroups |> limitNumberOfGroups
             in
                 { model | numberOfGroups = newNumber } ! []
 
@@ -88,81 +106,92 @@ update msg model =
         FinishSurvey ->
             { model | currentPage = Finished } ! []
 
-        StartSurvey ->
+        StartLikertSurvey ->
             let
                 newModel =
-                    { model | survey = Data.surveyData }
+                    { model | currentSurvey = DemoData.forceSurveyData }
             in
                 { newModel | currentPage = Survey } ! []
 
-        StartSurveyWithGroups numGroups ->
+        StartIpsativeSurvey numGroups ->
             let
                 newSurvey =
-                    Data.createSurvey 10 numGroups Data.surveyMetaData Data.surveyDataQuestions
+                    Survey.createIpsativeSurvey 10 numGroups DemoData.scdsMetaData DemoData.scdsQuestions
 
                 newModel =
-                    { model | survey = newSurvey }
+                    { model | currentSurvey = newSurvey }
             in
                 { newModel | currentPage = Survey } ! []
 
         NextQuestion ->
-            let
-                newQuestions =
-                    case Zipper.next model.survey.questions of
+            case model.currentSurvey of
+                Ipsative survey ->
+                    case Zipper.next survey.questions of
                         Just x ->
-                            x
+                            { model | currentSurvey = Ipsative { survey | questions = x } } ! []
 
                         _ ->
-                            model.survey.questions
+                            { model | currentSurvey = Ipsative survey } ! []
 
-                currentSurvey =
-                    model.survey
+                Likert survey ->
+                    case Zipper.next survey.questions of
+                        Just x ->
+                            { model | currentSurvey = Likert { survey | questions = x } } ! []
 
-                newSurvey =
-                    { currentSurvey | questions = newQuestions }
-            in
-                { model | survey = newSurvey } ! []
+                        _ ->
+                            { model | currentSurvey = Likert survey } ! []
 
         PreviousQuestion ->
-            let
-                newQuestions =
-                    case Zipper.previous model.survey.questions of
+            case model.currentSurvey of
+                Ipsative survey ->
+                    case Zipper.previous survey.questions of
                         Just x ->
-                            x
+                            { model | currentSurvey = Ipsative { survey | questions = x } } ! []
 
                         _ ->
-                            model.survey.questions
+                            { model | currentSurvey = Ipsative survey } ! []
 
-                currentSurvey =
-                    model.survey
+                Likert survey ->
+                    case Zipper.previous survey.questions of
+                        Just x ->
+                            { model | currentSurvey = Likert { survey | questions = x } } ! []
 
-                newSurvey =
-                    { currentSurvey | questions = newQuestions }
-            in
-                { model | survey = newSurvey } ! []
+                        _ ->
+                            { model | currentSurvey = Likert survey } ! []
 
         DecrementAnswer answer groupNumber ->
             --if points for this answer is > 0,
             --then decrement the point in this answer and
             --increment the points left for the group
             let
-                newModel =
-                    decrementAnswer model answer groupNumber
+                newSurvey =
+                    case model.currentSurvey of
+                        Ipsative survey ->
+                            Ipsative (decrementAnswer survey answer groupNumber)
+
+                        _ ->
+                            model.currentSurvey
             in
-                newModel ! []
+                { model | currentSurvey = newSurvey } ! []
 
         IncrementAnswer answer groupNumber ->
             --    --if points left in group > 0,
             --then increment the point in the group for
             --this answer and decrement the points assigned for the group
             let
-                newModel =
-                    incrementAnswer model answer groupNumber
+                newSurvey =
+                    case model.currentSurvey of
+                        Ipsative survey ->
+                            Ipsative (incrementAnswer survey answer groupNumber)
+
+                        _ ->
+                            model.currentSurvey
             in
-                newModel ! []
+                { model | currentSurvey = newSurvey } ! []
 
 
-incrementAnswer model answer group =
+incrementAnswer : IpsativeSurvey -> IpsativeAnswer -> Int -> IpsativeSurvey
+incrementAnswer survey answer groupNumber =
     let
         newQuestions =
             Zipper.mapCurrent
@@ -172,9 +201,9 @@ incrementAnswer model answer group =
                     , pointsLeft =
                         List.map
                             (\pointsLeftInGroup ->
-                                if pointsLeftInGroup.group == group then
+                                if pointsLeftInGroup.group == groupNumber then
                                     if pointsLeftInGroup.pointsLeft > 0 then
-                                        { group = group, pointsLeft = pointsLeftInGroup.pointsLeft - 1 }
+                                        { group = groupNumber, pointsLeft = pointsLeftInGroup.pointsLeft - 1 }
                                     else
                                         pointsLeftInGroup
                                 else
@@ -189,8 +218,8 @@ incrementAnswer model answer group =
                                         | pointsAssigned =
                                             List.map
                                                 (\y ->
-                                                    if y.group == group then
-                                                        if isPointsInGroup question.pointsLeft group then
+                                                    if y.group == groupNumber then
+                                                        if isPointsInGroup question.pointsLeft groupNumber then
                                                             { y | points = y.points + 1 }
                                                         else
                                                             y
@@ -205,21 +234,13 @@ incrementAnswer model answer group =
                             question.answers
                     }
                 )
-                model.survey.questions
-
-        currentSurvey =
-            model.survey
-
-        newSurvey =
-            { currentSurvey | questions = newQuestions }
-
-        newModel =
-            { model | survey = newSurvey }
+                survey.questions
     in
-        newModel
+        { survey | questions = newQuestions }
 
 
-decrementAnswer model answer group =
+decrementAnswer : IpsativeSurvey -> IpsativeAnswer -> Int -> IpsativeSurvey
+decrementAnswer survey answer groupNumber =
     let
         newQuestions =
             Zipper.mapCurrent
@@ -229,8 +250,8 @@ decrementAnswer model answer group =
                     , pointsLeft =
                         List.map
                             (\pointsLeftInGroup ->
-                                if pointsLeftInGroup.group == group then
-                                    if isAnswerGreaterThanZero answer group then
+                                if pointsLeftInGroup.group == groupNumber then
+                                    if isAnswerGreaterThanZero answer groupNumber then
                                         { pointsLeftInGroup | pointsLeft = pointsLeftInGroup.pointsLeft + 1 }
                                     else
                                         pointsLeftInGroup
@@ -246,7 +267,7 @@ decrementAnswer model answer group =
                                         | pointsAssigned =
                                             List.map
                                                 (\y ->
-                                                    if y.group == group then
+                                                    if y.group == groupNumber then
                                                         if y.points > 0 then
                                                             { y | points = y.points - 1 }
                                                         else
@@ -262,18 +283,9 @@ decrementAnswer model answer group =
                             question.answers
                     }
                 )
-                model.survey.questions
-
-        currentSurvey =
-            model.survey
-
-        newSurvey =
-            { currentSurvey | questions = newQuestions }
-
-        newModel =
-            { model | survey = newSurvey }
+                survey.questions
     in
-        newModel
+        { survey | questions = newQuestions }
 
 
 isAnswerGreaterThanZero answer group =
@@ -320,42 +332,65 @@ view model =
         column Main
             []
             [ viewHeader
-
-            --, viewTest model
             , case model.currentPage of
                 Instructions ->
                     viewInstructions model
 
                 Survey ->
-                    viewSurvey model
+                    viewSurvey model.currentSurvey
 
                 Finished ->
                     viewFinished model
             ]
 
 
-
---viewTest : Model -> Element Styles variation Msg
---viewTest model =
---    Element.html
---        (Html.div [ Html.Attributes.style [ ( "width", "40%" ) ] ] [ Html.canvas [ Html.Attributes.id "chart" ] [] ])
-
-
 viewInstructions : Model -> Element Styles variation Msg
 viewInstructions model =
     column None
         [ center, spacing 20, paddingTop 20 ]
-        [ h1 None [] (Element.text "Welcome to the Elm Ipsative Survey Prototype. There are currently 2 surveys to choose from.")
-        , h2 None [] (Element.text model.survey.metaData.name)
-        , h2 None [] (Element.text ("Last Updated: " ++ model.survey.metaData.lastUpdated))
-        , h2 None [] (Element.text ("Created By: " ++ model.survey.metaData.createdBy))
-        , button NextButton [ paddingXY 20 10, onClick StartSurvey ] (Element.text "Click to Start Survey")
+        [ h1 None
+            []
+            (Element.text "Welcome to the Elm Haven Survey Prototype. There are currently 2 surveys to choose from.")
+        , wrappedRow None
+            [ spacing 10, center ]
+            (List.map
+                (\survey ->
+                    case survey of
+                        Ipsative survey ->
+                            viewScdsInstructions survey model.numberOfGroups
+
+                        Likert survey ->
+                            viewForceInstructions survey
+                )
+                model.availableSurveys
+            )
+        ]
+
+
+viewForceInstructions : LikertSurvey -> Element Styles variation Msg
+viewForceInstructions survey =
+    column SubQuestionStyle
+        [ center, spacing 10, padding 10 ]
+        [ h2 None [] (Element.text survey.metaData.name)
+        , h2 None [] (Element.text ("Last Updated: " ++ survey.metaData.lastUpdated))
+        , h2 None [] (Element.text ("Created By: " ++ survey.metaData.createdBy))
+        , button NextButton [ paddingXY 20 10, onClick StartLikertSurvey ] (Element.text "Click to Start Survey")
+        ]
+
+
+viewScdsInstructions : IpsativeSurvey -> Int -> Element Styles variation Msg
+viewScdsInstructions survey numberOfGroups =
+    column SubQuestionStyle
+        [ center, spacing 10, padding 10 ]
+        [ h2 None [] (Element.text survey.metaData.name)
+        , h2 None [] (Element.text ("Last Updated: " ++ survey.metaData.lastUpdated))
+        , h2 None [] (Element.text ("Created By: " ++ survey.metaData.createdBy))
         , row None
-            [ spacing 20 ]
+            [ spacing 10 ]
             [ Input.text NumberField
                 []
                 { onChange = ChangeNumberOfGroups
-                , value = (toString model.numberOfGroups)
+                , value = (toString numberOfGroups)
                 , label =
                     Input.placeholder
                         { label = Input.labelAbove (el None [] (Element.text "Number of Groups"))
@@ -364,27 +399,17 @@ viewInstructions model =
                 , options =
                     []
                 }
-            , button NextButton [ paddingXY 20 10, onClick (StartSurveyWithGroups model.numberOfGroups) ] (Element.text ("Click to Start Survey with " ++ (toString model.numberOfGroups) ++ " Groups"))
+            , button NextButton [ paddingXY 20 10, onClick (StartIpsativeSurvey numberOfGroups) ] (Element.text ("Click to Start Survey with " ++ (toString numberOfGroups) ++ " Groups"))
             ]
         ]
 
 
 viewFinished : Model -> Element Styles variation Msg
 viewFinished model =
-    Element.html
-        (Html.div []
-            [ viewChart model
-            , Html.table []
-                (viewFinishedTableHeader :: viewFinishedTableRows model.survey.questions)
-            ]
-        )
-
-
-viewChart : Model -> Html.Html Msg
-viewChart model =
-    Html.div []
-        [ Html.button [ Html.Events.onClick GenerateChart ] [ Html.text "Click to generate radar chart" ]
-        , Html.div [ Html.Attributes.style [ ( "width", "40%" ) ] ] [ Html.canvas [ Html.Attributes.id "chart" ] [] ]
+    column None
+        [ paddingTop 100, spacing 10, center ]
+        [ h1 None [] (Element.text "You finished the survey!")
+        , button NextButton [ paddingXY 20 10, onClick GoToInstructions ] (Element.text "Click to Start Over")
         ]
 
 
@@ -397,7 +422,7 @@ viewFinishedTableHeader =
         ]
 
 
-viewFinishedTableRows : Zipper Question -> List (Html.Html Msg)
+viewFinishedTableRows : Zipper IpsativeQuestion -> List (Html.Html Msg)
 viewFinishedTableRows questions =
     let
         outputRows =
@@ -414,7 +439,7 @@ type alias OutputRow =
     }
 
 
-generateOutputRows : List Question -> List OutputRow
+generateOutputRows : List IpsativeQuestion -> List OutputRow
 generateOutputRows questions =
     let
         mapped =
@@ -453,12 +478,51 @@ viewOutputRows outputRows =
         outputRows
 
 
-viewSurvey : Model -> Element Styles variation Msg
-viewSurvey model =
+viewSurvey : Survey -> Element Styles variation Msg
+viewSurvey survey =
+    case survey of
+        Ipsative survey ->
+            viewIpsativeSurvey survey
+
+        Likert survey ->
+            viewLikertSurvey survey
+
+
+viewLikertSurvey : LikertSurvey -> Element Styles variation Msg
+viewLikertSurvey survey =
     column None
         [ spacing 20 ]
-        [ viewSurveyTitle model.survey
-        , viewSurveyBoxes (Zipper.current model.survey.questions)
+        [ viewLikertSurveyTitle survey
+        , viewLikertSurveyTable (Zipper.current survey.questions)
+        , viewSurveyFooter
+        ]
+
+
+viewLikertSurveyTable : LikertQuestion -> Element Styles variation Msg
+viewLikertSurveyTable surveyQuestion =
+    table None
+        []
+        [ [ el None [] (Element.text "Statement")
+          , el None [] (Element.text "hey")
+          , el None [] (Element.text "hey")
+          ]
+        , [ el None [] (Element.text "Agree")
+          , el None [] (Element.text "hey")
+          , el None [] (Element.text "hey")
+          ]
+        , [ el None [] (Element.text "Disagree")
+          , el None [] (Element.text "hey")
+          , el None [] (Element.text "hey")
+          ]
+        ]
+
+
+viewIpsativeSurvey : IpsativeSurvey -> Element Styles variation Msg
+viewIpsativeSurvey survey =
+    column None
+        [ spacing 20 ]
+        [ viewIpsativeSurveyTitle survey
+        , viewIpsativeSurveyBoxes (Zipper.current survey.questions)
         , viewSurveyFooter
         ]
 
@@ -467,7 +531,7 @@ viewHeader : Element Styles variation Msg
 viewHeader =
     row NavBarStyle
         [ spread, paddingXY 80 20 ]
-        [ el Logo [] (Element.text "Elm Ipsative Survey Prototype")
+        [ el Logo [] (Element.text "Elm Haven Survey Prototype")
         , row None
             [ spacing 20, verticalCenter ]
             [ el NavOption [] (Element.text "Instructions")
@@ -476,8 +540,33 @@ viewHeader =
         ]
 
 
-viewSurveyTitle : Survey -> Element Styles variation Msg
-viewSurveyTitle survey =
+viewLikertSurveyTitle : LikertSurvey -> Element Styles variation Msg
+viewLikertSurveyTitle survey =
+    let
+        currentQuestion =
+            Zipper.current survey.questions
+
+        questionNumber =
+            currentQuestion.id
+
+        totalQuestions =
+            List.length (Zipper.toList survey.questions)
+
+        questionTitle =
+            currentQuestion.title
+    in
+        row None
+            [ center, paddingTop 20 ]
+            [ column None
+                [ spacing 10 ]
+                [ el None [] (Element.text ("Question " ++ (toString questionNumber) ++ " of " ++ (toString totalQuestions)))
+                , el SurveyQuestionStyle [] (Element.text questionTitle)
+                ]
+            ]
+
+
+viewIpsativeSurveyTitle : IpsativeSurvey -> Element Styles variation Msg
+viewIpsativeSurveyTitle survey =
     let
         currentQuestion =
             Zipper.current survey.questions
@@ -504,7 +593,7 @@ viewSurveyTitle survey =
             ]
 
 
-viewPointsLeft : List Data.PointsLeft -> Int -> List (Element Styles variation Msg)
+viewPointsLeft : List Survey.PointsLeft -> Int -> List (Element Styles variation Msg)
 viewPointsLeft pointsLeft pointsPerQuestion =
     List.map
         (\x ->
@@ -524,14 +613,14 @@ calculateProgressBarPercent current max =
     100 * ((toFloat current) / (toFloat max))
 
 
-viewSurveyBoxes : Question -> Element Styles variation Msg
-viewSurveyBoxes surveyQuestion =
+viewIpsativeSurveyBoxes : IpsativeQuestion -> Element Styles variation Msg
+viewIpsativeSurveyBoxes surveyQuestion =
     wrappedRow None
         [ spacing 10, center ]
         (List.map (\x -> viewSurveyBox x) surveyQuestion.answers)
 
 
-viewSurveyBox : Answer -> Element Styles variation Msg
+viewSurveyBox : IpsativeAnswer -> Element Styles variation Msg
 viewSurveyBox answer =
     el None
         [ width (px 600) ]

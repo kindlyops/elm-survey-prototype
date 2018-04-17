@@ -1,6 +1,6 @@
-module RadarChart exposing (generateChartConfig, RadarChartConfig)
+module RadarChart exposing (generateIpsativeChart, RadarChartConfig)
 
-import Data exposing (Survey, Question)
+import Survey exposing (IpsativeSurvey, IpsativeQuestion)
 import Set as Set exposing (..)
 import Color exposing (..)
 import List.Zipper as Zipper exposing (..)
@@ -70,8 +70,8 @@ type alias RadarChartConfig =
     }
 
 
-generateChartConfig : Survey -> RadarChartConfig
-generateChartConfig survey =
+generateIpsativeChart : IpsativeSurvey -> RadarChartConfig
+generateIpsativeChart survey =
     let
         questions =
             Zipper.toList survey.questions
@@ -101,7 +101,7 @@ type alias MappedResponse =
     }
 
 
-getMappedResponses : List Question -> List MappedResponse
+getMappedResponses : List IpsativeQuestion -> List MappedResponse
 getMappedResponses questions =
     let
         newAnswers =
@@ -126,7 +126,7 @@ getMappedResponses questions =
         newAnswers |> List.concat |> List.concat
 
 
-getDataSets : List Question -> List RadarChartDataSet
+getDataSets : List IpsativeQuestion -> List RadarChartDataSet
 getDataSets questions =
     let
         allResponses =
@@ -208,7 +208,7 @@ getDataFromGroupedAnswers responses groupNumber =
         test
 
 
-getLabels : List Question -> List String
+getLabels : List IpsativeQuestion -> List String
 getLabels questions =
     let
         allCategories =

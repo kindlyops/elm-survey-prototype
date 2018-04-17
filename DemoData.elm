@@ -1,175 +1,169 @@
-module Data exposing (..)
+module DemoData
+    exposing
+        ( scdsSurveyData
+        , scdsMetaData
+        , scdsQuestions
+        , forceSurveyData
+        )
 
-import List.Zipper as Zipper exposing (..)
+import Survey
+    exposing
+        ( IpsativeSurvey
+        , LikertSurvey
+        , Survey
+        , LikertMetaData
+        , LikertServerQuestion
+        , IpsativeMetaData
+        , IpsativeServerQuestion
+        , createIpsativeSurvey
+        , createLikertSurvey
+        )
 
 
-type alias Survey =
-    { metaData : SurveyMetaData
-    , pointsPerQuestion : Int
-    , numGroups : Int
-    , questions : Zipper Question
+scdsSurveyData : Survey
+scdsSurveyData =
+    createIpsativeSurvey 10 2 scdsMetaData scdsQuestions
+
+
+forceSurveyData : Survey
+forceSurveyData =
+    createLikertSurvey forceMetaData forceServerQuestions
+
+
+forceMetaData : LikertMetaData
+forceMetaData =
+    { name = "Security FORCE Survey"
+    , createdBy = "Lance Hayden"
+    , lastUpdated = "09/15/2015"
+    , description = "Survey to identify existing security culture in an organization."
+    , choices =
+        [ "Strongly Disagree"
+        , "Disagree"
+        , "Neutral"
+        , "Agree"
+        , "Strongly Agree"
+        ]
+    , instructions = "To complete this Security FORCE Survey, please indicate your level of agreement with each of the following statements regarding information security values and practices within your organization. Choose one response per statement. Please respond to all statements."
     }
 
 
-type alias SurveyMetaData =
-    { name : String
-    , description : String
-    , lastUpdated : String
-    , createdBy : String
-    }
-
-
-type alias Question =
-    { id : Int
-    , title : String
-    , pointsLeft : List PointsLeft
-    , answers : List Answer
-    }
-
-
-type alias PointsLeft =
-    { group : Int
-    , pointsLeft : Int
-    }
-
-
-type alias Answer =
-    { id : Int
-    , answer : String
-    , category : String
-    , pointsAssigned : List PointsAssigned
-    }
-
-
-type alias PointsAssigned =
-    { group : Int
-    , points : Int
-    }
-
-
-surveyMetaData =
-    { name = "SCDS_1"
+scdsMetaData : IpsativeMetaData
+scdsMetaData =
+    { name = "SCDS"
     , description = "Survey to identify existing security culture in an organization."
     , lastUpdated = "09/15/2015"
+    , instructions = "For each question, assign a total of 10 points, divided among the four statements based on how accurately you think each describes your organization."
     , createdBy = "Lance Hayden"
     }
 
 
-emptyQuestion : Question
-emptyQuestion =
-    { id = 0
-    , title = "UNKNOWN"
-    , pointsLeft = [ emptyPointsLeft ]
-    , answers =
-        [ emptyAnswer
-        ]
-    }
+forceServerQuestions : List LikertServerQuestion
+forceServerQuestions =
+    [ { title = "Security Value of Failure"
+      , id = 1
+      , answers =
+            [ { id = 1
+              , answer = "I feel confident I could predict where the organization’s next security incident will happen."
+              }
+            , { id = 2
+              , answer = "I regularly identify security problems while doing my job."
+              }
+            , { id = 3
+              , answer = "I feel very comfortable reporting security problems up the management chain."
+              }
+            , { id = 4
+              , answer = "I know that security problems I report will be taken seriously."
+              }
+            , { id = 5
+              , answer = "When a security problem is found, it gets fixed."
+              }
+            ]
+      }
+    , { title = "Security Value of Operations"
+      , id = 2
+      , answers =
+            [ { id = 1
+              , answer = "I know that someone is constantly keeping watch over how secure the organization is."
+              }
+            , { id = 2
+              , answer = "I am confident that information security in the organization actually works the way that people and policies say it does."
+              }
+            , { id = 3
+              , answer = "I feel like there are many experts around the organization willing and able to help me understand how things work."
+              }
+            , { id = 4
+              , answer = "Management and the security team regularly share information about security assessments."
+              }
+            , { id = 5
+              , answer = "Management stays actively involved in security and makes sure appropriate resources are available."
+              }
+            ]
+      }
+    , { title = "Security Value of Resilience"
+      , id = 3
+      , answers =
+            [ { id = 1
+              , answer = "I feel like people are trained to know more about security than just the minimum level necessary."
+              }
+            , { id = 2
+              , answer = "The organization has reserves of skill and expertise to call on in the event of a security incident or crisis."
+              }
+            , { id = 3
+              , answer = "I feel like everyone in the organization is encouraged to “get out of their comfort zone” and be part of security challenges. "
+              }
+            , { id = 4
+              , answer = "I feel like people are interested in what I know about security, and willing to share their own skills to help me as well."
+              }
+            , { id = 5
+              , answer = "The organization often conducts drills and scenarios to test how well we respond to security incidents and failures."
+              }
+            ]
+      }
+    , { title = "Security Value of Complexity"
+      , id = 4
+      , answers =
+            [ { id = 1
+              , answer = "I feel like people in the organization prefer complex explanations over simple ones."
+              }
+            , { id = 2
+              , answer = "I feel like people are open to being challenged or questioned about how they arrived at an answer."
+              }
+            , { id = 3
+              , answer = "The organization always has plenty of data to explain and justify its decisions."
+              }
+            , { id = 4
+              , answer = "People from outside the security team are encouraged to participate and question security plans and decisions."
+              }
+            , { id = 5
+              , answer = "The organization formally reviews strategies and predictions to make sure they were accurate, and adjusts accordingly."
+              }
+            ]
+      }
+    , { title = "Security Value of Expertise"
+      , id = 5
+      , answers =
+            [ { id = 1
+              , answer = "I know exactly where to go in the organization when I need an expert."
+              }
+            , { id = 2
+              , answer = "I think everyone in the organization feels that monitoring security is part of their job."
+              }
+            , { id = 3
+              , answer = "In the event of a security incident, people can legitimately bypass the bureaucracy to get things done."
+              }
+            , { id = 4
+              , answer = "People in the organization are encouraged to help other groups if they have the right skills to help them."
+              }
+            , { id = 5
+              , answer = "I feel empowered to take action myself, if something is about to cause a security failure."
+              }
+            ]
+      }
+    ]
 
 
-emptyAnswer : Answer
-emptyAnswer =
-    { id = 0
-    , answer = "EMPTY QUESTION"
-    , category = "EMPTY CATEGORY"
-    , pointsAssigned = [ emptyPointsAssigned ]
-    }
-
-
-emptyPointsLeft : PointsLeft
-emptyPointsLeft =
-    { group = 1
-    , pointsLeft = 10
-    }
-
-
-emptyPointsAssigned : PointsAssigned
-emptyPointsAssigned =
-    { group = 1
-    , points = 1
-    }
-
-
-surveyData : Survey
-surveyData =
-    createSurvey 10 2 surveyMetaData surveyDataQuestions
-
-
-createSurvey : Int -> Int -> SurveyMetaData -> List ServerQuestion -> Survey
-createSurvey pointsPerQuestion numGroups metaData questions =
-    { metaData = metaData
-    , pointsPerQuestion = pointsPerQuestion
-    , numGroups = numGroups
-    , questions =
-        Zipper.fromList (surveyDataQuestionsMapped questions numGroups pointsPerQuestion)
-            |> Zipper.withDefault emptyQuestion
-    }
-
-
-surveyDataQuestionsMapped : List ServerQuestion -> Int -> Int -> List Question
-surveyDataQuestionsMapped surveyDataQuestions numGroups numPointsPerQuestion =
-    List.map
-        (\x ->
-            { id = x.id
-            , title = x.title
-            , pointsLeft = createPointsLeft numGroups numPointsPerQuestion
-            , answers = createAnswers x.answers numGroups
-            }
-        )
-        surveyDataQuestions
-
-
-createPointsLeft : Int -> Int -> List PointsLeft
-createPointsLeft numGroups numPointsPerQuestion =
-    List.map
-        (\x ->
-            { group = x
-            , pointsLeft = numPointsPerQuestion
-            }
-        )
-        (List.range 1 numGroups)
-
-
-createAnswers : List ServerAnswer -> Int -> List Answer
-createAnswers serverAnswers numGroups =
-    List.map
-        (\x ->
-            { id = x.id
-            , answer = x.answer
-            , category = x.category
-            , pointsAssigned = createPointsAssigned numGroups
-            }
-        )
-        serverAnswers
-
-
-createPointsAssigned : Int -> List PointsAssigned
-createPointsAssigned numGroups =
-    --[ { group = 1, points = 1 } ]
-    List.map
-        (\x ->
-            { group = x
-            , points = 0
-            }
-        )
-        (List.range 1 numGroups)
-
-
-type alias ServerQuestion =
-    { id : Int
-    , title : String
-    , answers : List ServerAnswer
-    }
-
-
-type alias ServerAnswer =
-    { id : Int
-    , category : String
-    , answer : String
-    }
-
-
-surveyDataQuestions : List ServerQuestion
-surveyDataQuestions =
+scdsQuestions : List IpsativeServerQuestion
+scdsQuestions =
     [ { id = 1
       , title = "What's valued most?"
       , answers =
