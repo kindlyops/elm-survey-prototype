@@ -7,6 +7,7 @@ module Survey
         , IpsativeMetaData
         , IpsativeQuestion
         , LikertQuestion
+        , LikertAnswer
         , LikertServerAnswer
         , PointsLeft
         , IpsativeAnswer
