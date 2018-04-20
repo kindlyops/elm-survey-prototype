@@ -6,7 +6,8 @@
   "scripts": {
     "build": "elm-make Main.elm --output=build.js",
     "start": "elm-live Main.elm --output=build.js --open",
-    "debug": "elm-live Main.elm --debug --output=build.js --open"
+    "debug": "elm-live Main.elm --debug --output=build.js --open",
+    "build_bootstrap": "node build_bootstrap.js"
   },
   "repository": {
     "type": "git",
@@ -19,7 +20,9 @@
   },
   "homepage": "https://github.com/kindlyops/elm-survey-prototype#readme",
   "devDependencies": {
+    "bootstrap": "^4.1.0",
     "elm": "^0.18.0",
-    "elm-live": "^2.7.5"
+    "elm-live": "^2.7.5",
+    "node-sass": "^4.8.3"
   }
 }
