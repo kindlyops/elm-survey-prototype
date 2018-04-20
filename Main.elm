@@ -603,7 +603,7 @@ viewIpsativeSurvey survey =
 viewNavbar : Html Msg
 viewNavbar =
     nav [ class "navbar navbar-expand-lg navbar-light bg-light" ]
-        [ a [ class "navbar-brand", href "#" ]
+        [ a [ class "navbar-brand", onClick GoToHome ]
             [ text "Haven Survey Prototype" ]
         , button [ attribute "aria-controls" "navbarSupportedContent", attribute "aria-expanded" "false", attribute "aria-label" "Toggle navigation", class "navbar-toggler", attribute "data-target" "#navbarSupportedContent", attribute "data-toggle" "collapse", type_ "button" ]
             [ span [ class "navbar-toggler-icon" ]
@@ -612,7 +612,7 @@ viewNavbar =
         , div [ class "collapse navbar-collapse", id "navbarSupportedContent" ]
             [ ul [ class "navbar-nav mr-auto" ]
                 [ li [ class "nav-item active" ]
-                    [ a [ class "nav-link", href "#" ]
+                    [ a [ class "nav-link", onClick GoToHome ]
                         [ text "Home "
                         , span [ class "sr-only" ]
                             [ text "(current)" ]
