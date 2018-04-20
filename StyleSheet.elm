@@ -29,6 +29,9 @@ type Styles
     | SubQuestionStyle
     | SurveyQuestionStyle
     | NumberField
+    | LikertTableStyle
+    | LikertTableHeaderStyle
+    | LikertTableQuestionStyle
 
 
 sansSerif : List Font
@@ -126,6 +129,24 @@ stylesheet =
             , Font.bold
             ]
         , style NumberField
+            [ Border.rounded 5
+            , Border.all 1
+            , Border.solid
+            , Color.border Color.lightGrey
+            ]
+        , style LikertTableStyle
+            [ Border.rounded 5
+            , Border.all 1
+            , Border.solid
+            , Color.border Color.lightGrey
+            ]
+        , style LikertTableHeaderStyle
+            [ Border.rounded 5
+            , Border.all 1
+            , Border.solid
+            , Color.border Color.lightGrey
+            ]
+        , style LikertTableQuestionStyle
             [ Border.rounded 5
             , Border.all 1
             , Border.solid

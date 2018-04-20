@@ -7,6 +7,7 @@ module Survey
         , IpsativeMetaData
         , IpsativeQuestion
         , LikertQuestion
+        , LikertServerAnswer
         , PointsLeft
         , IpsativeAnswer
         , IpsativeServerAnswer
@@ -17,7 +18,7 @@ module Survey
         , emptyPointsAssigned
         , createIpsativeSurvey
         , createLikertSurvey
-        , surveyDataQuestionsMapped
+        , ipsativeQuestionsMapped
         , createPointsLeft
         , createAnswers
         , createPointsAssigned
@@ -111,6 +112,7 @@ type alias LikertMetaData =
 type alias LikertQuestion =
     { id : Int
     , title : String
+    , choices : List String
     , answers : List LikertAnswer
     }
 
@@ -118,11 +120,18 @@ type alias LikertQuestion =
 type alias LikertServerQuestion =
     { title : String
     , id : Int
-    , answers : List LikertAnswer
+    , answers : List LikertServerAnswer
     }
 
 
 type alias LikertAnswer =
+    { id : Int
+    , answer : String
+    , selectedChoice : Maybe String
+    }
+
+
+type alias LikertServerAnswer =
     { id : Int
     , answer : String
     }
@@ -132,6 +141,13 @@ emptyLikertQuestion : LikertQuestion
 emptyLikertQuestion =
     { id = 0
     , title = "UNKNOWN"
+    , choices =
+        [ "Strongly Disagree"
+        , "Disagree"
+        , "Neutral"
+        , "Agree"
+        , "Strongly Agree"
+        ]
     , answers = [ emptyLikertAnswer ]
     }
 
@@ -140,6 +156,7 @@ emptyLikertAnswer : LikertAnswer
 emptyLikertAnswer =
     { id = 0
     , answer = ""
+    , selectedChoice = Nothing
     }
 
 
@@ -184,21 +201,46 @@ createIpsativeSurvey pointsPerQuestion numGroups metaData questions =
         , pointsPerQuestion = pointsPerQuestion
         , numGroups = numGroups
         , questions =
-            Zipper.fromList (surveyDataQuestionsMapped questions numGroups pointsPerQuestion)
+            Zipper.fromList (ipsativeQuestionsMapped questions numGroups pointsPerQuestion)
                 |> Zipper.withDefault emptyIpsativeQuestion
         }
 
 
 createLikertSurvey : LikertMetaData -> List LikertServerQuestion -> Survey
-createLikertSurvey metaData questions =
+createLikertSurvey metaData serverQuestions =
     Likert
         { metaData = metaData
-        , questions = Zipper.fromList questions |> Zipper.withDefault emptyLikertQuestion
+        , questions = Zipper.fromList (likertQuestionsMapped serverQuestions metaData) |> Zipper.withDefault emptyLikertQuestion
         }
 
 
-surveyDataQuestionsMapped : List IpsativeServerQuestion -> Int -> Int -> List IpsativeQuestion
-surveyDataQuestionsMapped scdsQuestions numGroups numPointsPerQuestion =
+likertQuestionsMapped : List LikertServerQuestion -> LikertMetaData -> List LikertQuestion
+likertQuestionsMapped serverQuestions metaData =
+    List.map
+        (\serverQuestion ->
+            { id = serverQuestion.id
+            , title = serverQuestion.title
+            , answers = likertAnswersMapped serverQuestion.answers
+            , choices = metaData.choices
+            }
+        )
+        serverQuestions
+
+
+likertAnswersMapped : List LikertServerAnswer -> List LikertAnswer
+likertAnswersMapped answers =
+    List.map
+        (\answer ->
+            { id = answer.id
+            , answer = answer.answer
+            , selectedChoice = Nothing
+            }
+        )
+        answers
+
+
+ipsativeQuestionsMapped : List IpsativeServerQuestion -> Int -> Int -> List IpsativeQuestion
+ipsativeQuestionsMapped serverQuestions numGroups numPointsPerQuestion =
     List.map
         (\x ->
             { id = x.id
@@ -207,7 +249,7 @@ surveyDataQuestionsMapped scdsQuestions numGroups numPointsPerQuestion =
             , answers = createAnswers x.answers numGroups
             }
         )
-        scdsQuestions
+        serverQuestions
 
 
 createPointsLeft : Int -> Int -> List PointsLeft

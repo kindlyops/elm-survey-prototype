@@ -46,7 +46,7 @@ type alias Model =
 
 init : ( Model, Cmd Msg )
 init =
-    ( { currentSurvey = DemoData.scdsSurveyData
+    ( { currentSurvey = DemoData.forceSurveyData
       , availableSurveys = [ DemoData.scdsSurveyData, DemoData.forceSurveyData ]
       , currentPage = Instructions
       , numberOfGroups = 2
@@ -67,6 +67,7 @@ type Msg
     | ChangeNumberOfGroups String
     | FinishSurvey
     | GenerateChart
+    | SelectLikertAnswer Int String
 
 
 limitNumberOfGroups : Int -> Int
@@ -84,6 +85,18 @@ update msg model =
     case msg of
         NoOp ->
             model ! []
+
+        SelectLikertAnswer answerNumber choice ->
+            let
+                newSurvey =
+                    case model.currentSurvey of
+                        Likert survey ->
+                            Likert (selectLikertAnswer survey answerNumber choice)
+
+                        _ ->
+                            model.currentSurvey
+            in
+                { model | currentSurvey = newSurvey } ! []
 
         GenerateChart ->
             case model.currentSurvey of
@@ -188,6 +201,33 @@ update msg model =
                             model.currentSurvey
             in
                 { model | currentSurvey = newSurvey } ! []
+
+
+selectLikertAnswer : LikertSurvey -> Int -> String -> LikertSurvey
+selectLikertAnswer survey answerNumber choice =
+    let
+        newQuestions =
+            Zipper.mapCurrent
+                (\question ->
+                    { id = question.id
+                    , title = question.title
+                    , choices = question.choices
+                    , answers =
+                        List.map
+                            (\answer ->
+                                if answer.id == answerNumber then
+                                    { answer
+                                        | selectedChoice = Just choice
+                                    }
+                                else
+                                    answer
+                            )
+                            question.answers
+                    }
+                )
+                survey.questions
+    in
+        { survey | questions = newQuestions }
 
 
 incrementAnswer : IpsativeSurvey -> IpsativeAnswer -> Int -> IpsativeSurvey
@@ -328,20 +368,22 @@ isPointsInGroup pointsLeft group =
 
 view : Model -> Html.Html Msg
 view model =
-    Element.layout stylesheet <|
-        column Main
-            []
-            [ viewHeader
-            , case model.currentPage of
-                Instructions ->
-                    viewInstructions model
+    Html.div []
+        [ Element.layout stylesheet <|
+            column Main
+                []
+                [ viewHeader
+                , case model.currentPage of
+                    Instructions ->
+                        viewInstructions model
 
-                Survey ->
-                    viewSurvey model.currentSurvey
+                    Survey ->
+                        viewSurvey model.currentSurvey
 
-                Finished ->
-                    viewFinished model
-            ]
+                    Finished ->
+                        viewFinished model
+                ]
+        ]
 
 
 viewInstructions : Model -> Element Styles variation Msg
@@ -413,69 +455,12 @@ viewFinished model =
         ]
 
 
-viewFinishedTableHeader =
-    Html.tr []
-        [ Html.td [] [ Html.text "Question" ]
-        , Html.td [] [ Html.text "Answer" ]
-        , Html.td [] [ Html.text "Group" ]
-        , Html.td [] [ Html.text "Points" ]
-        ]
-
-
-viewFinishedTableRows : Zipper IpsativeQuestion -> List (Html.Html Msg)
-viewFinishedTableRows questions =
-    let
-        outputRows =
-            generateOutputRows (Zipper.toList questions)
-    in
-        viewOutputRows outputRows
-
-
 type alias OutputRow =
     { question : String
     , answer : String
     , group : String
     , pointsAssigned : String
     }
-
-
-generateOutputRows : List IpsativeQuestion -> List OutputRow
-generateOutputRows questions =
-    let
-        mapped =
-            List.map
-                (\question ->
-                    List.map
-                        (\answer ->
-                            List.map
-                                (\pointsAssigned ->
-                                    { question = question.title
-                                    , answer = (toString question.id) ++ "-" ++ (toString answer.id)
-                                    , group = (toString pointsAssigned.group)
-                                    , pointsAssigned = (toString pointsAssigned.points)
-                                    }
-                                )
-                                answer.pointsAssigned
-                        )
-                        question.answers
-                )
-                questions
-    in
-        mapped |> List.concat |> List.concat
-
-
-viewOutputRows : List OutputRow -> List (Html.Html Msg)
-viewOutputRows outputRows =
-    List.map
-        (\row ->
-            Html.tr []
-                [ Html.td [] [ Html.text row.question ]
-                , Html.td [] [ Html.text row.answer ]
-                , Html.td [] [ Html.text row.group ]
-                , Html.td [] [ Html.text row.pointsAssigned ]
-                ]
-        )
-        outputRows
 
 
 viewSurvey : Survey -> Element Styles variation Msg
@@ -500,21 +485,46 @@ viewLikertSurvey survey =
 
 viewLikertSurveyTable : LikertQuestion -> Element Styles variation Msg
 viewLikertSurveyTable surveyQuestion =
-    table None
-        []
-        [ [ el None [] (Element.text "Statement")
-          , el None [] (Element.text "hey")
-          , el None [] (Element.text "hey")
-          ]
-        , [ el None [] (Element.text "Agree")
-          , el None [] (Element.text "hey")
-          , el None [] (Element.text "hey")
-          ]
-        , [ el None [] (Element.text "Disagree")
-          , el None [] (Element.text "hey")
-          , el None [] (Element.text "hey")
-          ]
-        ]
+    Element.html <|
+        (Html.div []
+            [ Html.table
+                [ Html.Attributes.class "pa3" ]
+                (viewLikertSurveyTableHeader surveyQuestion :: viewLikertSurveyTableRows surveyQuestion)
+            ]
+        )
+
+
+viewLikertSurveyTableRows : LikertQuestion -> List (Html.Html Msg)
+viewLikertSurveyTableRows question =
+    List.map
+        (\answer ->
+            Html.tr [ Html.Attributes.class "ba", Html.Events.onClick NoOp ]
+                (Html.td [] [ Html.text answer.answer ]
+                    :: (List.map
+                            (\choice ->
+                                Html.td
+                                    [ Html.Attributes.class "ba hover-bg-gray"
+                                    ]
+                                    [ Html.div [ Html.Events.onClick (SelectLikertAnswer answer.id choice) ] [ Html.text "click me" ] ]
+                            )
+                            question.choices
+                       )
+                )
+        )
+        question.answers
+
+
+viewLikertSurveyTableHeader : LikertQuestion -> Html.Html Msg
+viewLikertSurveyTableHeader surveyQuestion =
+    Html.tr [ Html.Attributes.class "ba" ]
+        (Html.th [ Html.Attributes.class "ba " ] [ Html.text "Statement" ]
+            :: (List.map
+                    (\choice ->
+                        Html.th [ Html.Attributes.class "ba " ] [ Html.text choice ]
+                    )
+                    surveyQuestion.choices
+               )
+        )
 
 
 viewIpsativeSurvey : IpsativeSurvey -> Element Styles variation Msg
