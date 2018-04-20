@@ -8,6 +8,7 @@ import Ports
 import Survey as Survey exposing (..)
 import RadarChart exposing (RadarChartConfig, generateIpsativeChart)
 import DemoData as DemoData exposing (scdsSurveyData, scdsMetaData, scdsQuestions, forceSurveyData)
+import Icons as Icons exposing (..)
 
 
 main : Program Never Model Msg
@@ -734,8 +735,8 @@ viewSurveyPointsGroup answer group =
                 , p [ class "card-text" ] [ text ("Points: " ++ toString group.points) ]
                 ]
             , div [ class "col-6 btn-group-vertical" ]
-                [ button [ type_ "button", class "btn btn-outline-success", onClick (IncrementAnswer answer group.group) ] [ text "+" ]
-                , button [ type_ "button", class "btn btn-outline-success", onClick (DecrementAnswer answer group.group) ] [ text "-" ]
+                [ button [ type_ "button", class "btn btn-outline-success", onClick (IncrementAnswer answer group.group) ] [ Icons.plus ]
+                , button [ type_ "button", class "btn btn-outline-success", onClick (DecrementAnswer answer group.group) ] [ Icons.minus ]
                 ]
             ]
         ]
