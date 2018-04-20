@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "build": "elm-make Main.elm --output=build.js",
-    "start": "elm-live Main.elm --output=build.js --open"
+    "start": "elm-live Main.elm --output=build.js --open",
+    "debug": "elm-live Main.elm --debug --output=build.js --open"
   },
   "repository": {
     "type": "git",

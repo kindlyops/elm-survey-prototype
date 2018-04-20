@@ -1,18 +1,13 @@
 module Main exposing (..)
 
-import Element exposing (..)
-import Element.Attributes exposing (..)
-import Element.Events exposing (..)
-import Element.Input as Input exposing (..)
-import Html
-import Ports
-import RadarChart exposing (RadarChartConfig, generateIpsativeChart)
-import Html.Attributes
-import Html.Events
-import DemoData as DemoData exposing (scdsSurveyData, scdsMetaData, scdsQuestions, forceSurveyData)
+import Html exposing (..)
+import Html.Attributes exposing (..)
+import Html.Events exposing (..)
 import List.Zipper as Zipper exposing (..)
+import Ports
 import Survey as Survey exposing (..)
-import StyleSheet exposing (..)
+import RadarChart exposing (RadarChartConfig, generateIpsativeChart)
+import DemoData as DemoData exposing (scdsSurveyData, scdsMetaData, scdsQuestions, forceSurveyData)
 
 
 main : Program Never Model Msg
@@ -31,7 +26,8 @@ subscriptions model =
 
 
 type Page
-    = Instructions
+    = Home
+    | SurveyInstructions
     | Survey
     | Finished
 
@@ -48,7 +44,7 @@ init : ( Model, Cmd Msg )
 init =
     ( { currentSurvey = DemoData.forceSurveyData
       , availableSurveys = [ DemoData.scdsSurveyData, DemoData.forceSurveyData ]
-      , currentPage = Instructions
+      , currentPage = Home
       , numberOfGroups = 2
       }
     , Cmd.none
@@ -58,12 +54,14 @@ init =
 type Msg
     = NoOp
     | StartLikertSurvey
-    | StartIpsativeSurvey Int
+    | StartIpsativeSurvey
+    | BeginLikertSurvey
+    | BeginIpsativeSurvey
     | IncrementAnswer IpsativeAnswer Int
     | DecrementAnswer IpsativeAnswer Int
     | NextQuestion
     | PreviousQuestion
-    | GoToInstructions
+    | GoToHome
     | ChangeNumberOfGroups String
     | FinishSurvey
     | GenerateChart
@@ -113,28 +111,34 @@ update msg model =
             in
                 { model | numberOfGroups = newNumber } ! []
 
-        GoToInstructions ->
-            { model | currentPage = Instructions } ! []
+        GoToHome ->
+            { model | currentPage = Home } ! []
 
         FinishSurvey ->
             { model | currentPage = Finished } ! []
 
         StartLikertSurvey ->
+            { model | currentPage = Survey } ! []
+
+        StartIpsativeSurvey ->
+            { model | currentPage = Survey } ! []
+
+        BeginLikertSurvey ->
             let
                 newModel =
                     { model | currentSurvey = DemoData.forceSurveyData }
             in
-                { newModel | currentPage = Survey } ! []
+                { newModel | currentPage = SurveyInstructions } ! []
 
-        StartIpsativeSurvey numGroups ->
+        BeginIpsativeSurvey ->
             let
                 newSurvey =
-                    Survey.createIpsativeSurvey 10 numGroups DemoData.scdsMetaData DemoData.scdsQuestions
+                    Survey.createIpsativeSurvey 10 model.numberOfGroups DemoData.scdsMetaData DemoData.scdsQuestions
 
                 newModel =
                     { model | currentSurvey = newSurvey }
             in
-                { newModel | currentPage = Survey } ! []
+                { newModel | currentPage = SurveyInstructions } ! []
 
         NextQuestion ->
             case model.currentSurvey of
@@ -368,102 +372,143 @@ isPointsInGroup pointsLeft group =
 
 view : Model -> Html.Html Msg
 view model =
-    Html.div []
-        [ Element.layout stylesheet <|
-            column Main
-                []
-                [ viewHeader
-                , case model.currentPage of
-                    Instructions ->
-                        viewInstructions model
+    div [] [ viewNavbar, viewApp model ]
 
-                    Survey ->
-                        viewSurvey model.currentSurvey
 
-                    Finished ->
-                        viewFinished model
+viewApp : Model -> Html Msg
+viewApp model =
+    case model.currentPage of
+        Home ->
+            viewHero model
+
+        SurveyInstructions ->
+            viewSurveyInstructions model.currentSurvey
+
+        Survey ->
+            viewSurvey model.currentSurvey
+
+        Finished ->
+            viewFinished model
+
+
+viewSurveyInstructions : Survey -> Html Msg
+viewSurveyInstructions survey =
+    case survey of
+        Ipsative survey ->
+            viewIpsativeSurveyInstructions survey
+
+        Likert survey ->
+            viewLikertSurveyInstructions survey
+
+
+viewIpsativeSurveyInstructions : IpsativeSurvey -> Html Msg
+viewIpsativeSurveyInstructions survey =
+    div [ class "container" ]
+        [ div [ class "row" ]
+            [ div
+                [ class "jumbotron" ]
+                [ h1 [ class "display-4" ] [ text survey.metaData.name ]
+                , p [ class "lead" ] [ text survey.metaData.instructions ]
+                , hr [ class "my-4" ] []
+                , button [ class "btn btn-primary", onClick StartIpsativeSurvey ] [ text "Begin" ]
                 ]
+            ]
         ]
 
 
-viewInstructions : Model -> Element Styles variation Msg
-viewInstructions model =
-    column None
-        [ center, spacing 20, paddingTop 20 ]
-        [ h1 None
-            []
-            (Element.text "Welcome to the Elm Haven Survey Prototype. There are currently 2 surveys to choose from.")
-        , wrappedRow None
-            [ spacing 10, center ]
+viewLikertSurveyInstructions : LikertSurvey -> Html Msg
+viewLikertSurveyInstructions survey =
+    div [ class "container" ]
+        [ div [ class "row" ]
+            [ div
+                [ class "jumbotron" ]
+                [ h1 [ class "display-4" ] [ text survey.metaData.name ]
+                , p [ class "lead" ] [ text survey.metaData.instructions ]
+                , hr [ class "my-4" ] []
+                , button [ class "btn btn-primary", onClick StartLikertSurvey ] [ text "Begin" ]
+                ]
+            ]
+        ]
+
+
+viewHero : Model -> Html Msg
+viewHero model =
+    div [ class "jumbotron" ]
+        [ h1 [ class "display-4" ] [ text "KindlyOps Haven Survey Prototype" ]
+        , p [ class "lead" ] [ text "Welcome to the Elm Haven Survey Prototype. " ]
+        , hr [ class "my-4" ] []
+        , p [ class "" ] [ text ("There are currently " ++ (toString (List.length model.availableSurveys)) ++ " surveys to choose from.") ]
+        , div [ class "row" ]
             (List.map
                 (\survey ->
                     case survey of
                         Ipsative survey ->
-                            viewScdsInstructions survey model.numberOfGroups
+                            div [ class "col-sm" ]
+                                [ viewScdsCard survey model.numberOfGroups
+                                ]
 
                         Likert survey ->
-                            viewForceInstructions survey
+                            div [ class "col-sm" ]
+                                [ viewForceCard survey
+                                ]
                 )
                 model.availableSurveys
             )
         ]
 
 
-viewForceInstructions : LikertSurvey -> Element Styles variation Msg
-viewForceInstructions survey =
-    column SubQuestionStyle
-        [ center, spacing 10, padding 10 ]
-        [ h2 None [] (Element.text survey.metaData.name)
-        , h2 None [] (Element.text ("Last Updated: " ++ survey.metaData.lastUpdated))
-        , h2 None [] (Element.text ("Created By: " ++ survey.metaData.createdBy))
-        , button NextButton [ paddingXY 20 10, onClick StartLikertSurvey ] (Element.text "Click to Start Survey")
-        ]
-
-
-viewScdsInstructions : IpsativeSurvey -> Int -> Element Styles variation Msg
-viewScdsInstructions survey numberOfGroups =
-    column SubQuestionStyle
-        [ center, spacing 10, padding 10 ]
-        [ h2 None [] (Element.text survey.metaData.name)
-        , h2 None [] (Element.text ("Last Updated: " ++ survey.metaData.lastUpdated))
-        , h2 None [] (Element.text ("Created By: " ++ survey.metaData.createdBy))
-        , row None
-            [ spacing 10 ]
-            [ Input.text NumberField
-                []
-                { onChange = ChangeNumberOfGroups
-                , value = (toString numberOfGroups)
-                , label =
-                    Input.placeholder
-                        { label = Input.labelAbove (el None [] (Element.text "Number of Groups"))
-                        , text = ""
-                        }
-                , options =
-                    []
-                }
-            , button NextButton [ paddingXY 20 10, onClick (StartIpsativeSurvey numberOfGroups) ] (Element.text ("Click to Start Survey with " ++ (toString numberOfGroups) ++ " Groups"))
+viewForceCard : LikertSurvey -> Html Msg
+viewForceCard survey =
+    div [ class "card" ]
+        [ div [ class "card-header" ] [ text "Likert" ]
+        , div [ class "card-body" ]
+            [ h5 [ class "card-title" ]
+                [ text survey.metaData.name
+                ]
+            , p [ class "card-text" ] [ text survey.metaData.description ]
+            ]
+        , ul [ class "list-group list-group-flush" ]
+            [ li [ class "list-group-item" ] [ text ("Last Updated: " ++ survey.metaData.lastUpdated) ]
+            , li [ class "list-group-item" ] [ text ("Created By: " ++ survey.metaData.createdBy) ]
+            , li [ class "list-group-item" ] [ button [ class "btn btn-primary", onClick BeginLikertSurvey ] [ text "Click to start survey" ] ]
             ]
         ]
 
 
-viewFinished : Model -> Element Styles variation Msg
-viewFinished model =
-    column None
-        [ paddingTop 100, spacing 10, center ]
-        [ h1 None [] (Element.text "You finished the survey!")
-        , button NextButton [ paddingXY 20 10, onClick GoToInstructions ] (Element.text "Click to Start Over")
+viewScdsCard : IpsativeSurvey -> Int -> Html Msg
+viewScdsCard survey numberOfGroups =
+    div [ class "card" ]
+        [ div [ class "card-header" ] [ text "Ipsative" ]
+        , div [ class "card-body" ]
+            [ h5 [ class "card-title" ]
+                [ text survey.metaData.name
+                ]
+            , p [ class "card-text" ] [ text survey.metaData.description ]
+            ]
+        , ul [ class "list-group list-group-flush" ]
+            [ li [ class "list-group-item" ] [ text ("Last Updated: " ++ survey.metaData.lastUpdated) ]
+            , li [ class "list-group-item" ] [ text ("Created By: " ++ survey.metaData.createdBy) ]
+            , li [ class "list-group-item" ]
+                [ label [] [ text "Number of Groups" ]
+                , input
+                    [ type_ "number"
+                    , class "form-control form-control-sm"
+                    , onInput ChangeNumberOfGroups
+                    , Html.Attributes.value (toString numberOfGroups)
+                    ]
+                    []
+                ]
+            , li [ class "list-group-item" ] [ button [ class "btn btn-primary", onClick BeginIpsativeSurvey ] [ text ("Click to Start Survey with " ++ (toString numberOfGroups) ++ " Groups") ] ]
+            ]
         ]
 
 
-type alias OutputRow =
-    { question : String
-    , answer : String
-    , group : String
-    , pointsAssigned : String
-    }
+viewFinished : Model -> Html Msg
+viewFinished model =
+    div [] [ text "You finished the survey!" ]
 
 
-viewSurvey : Survey -> Element Styles variation Msg
+viewSurvey : Survey -> Html Msg
 viewSurvey survey =
     case survey of
         Ipsative survey ->
@@ -473,84 +518,103 @@ viewSurvey survey =
             viewLikertSurvey survey
 
 
-viewLikertSurvey : LikertSurvey -> Element Styles variation Msg
+viewLikertSurvey : LikertSurvey -> Html Msg
 viewLikertSurvey survey =
-    column None
-        [ spacing 20 ]
+    div [ class "container-fluid" ]
         [ viewLikertSurveyTitle survey
+        , br [] []
         , viewLikertSurveyTable (Zipper.current survey.questions)
+        , br [] []
         , viewSurveyFooter
         ]
 
 
-viewLikertSurveyTable : LikertQuestion -> Element Styles variation Msg
+viewLikertSurveyTable : LikertQuestion -> Html Msg
 viewLikertSurveyTable surveyQuestion =
-    Element.html <|
-        (Html.div []
-            [ Html.table
-                [ Html.Attributes.class "pa3" ]
-                (viewLikertSurveyTableHeader surveyQuestion :: viewLikertSurveyTableRows surveyQuestion)
+    div [ class "row" ]
+        [ div [ class "col-md" ]
+            [ table [ class "table table-bordered table-hover table-sm" ]
+                [ viewLikertSurveyTableHeader surveyQuestion
+                , viewLikertSurveyTableRows surveyQuestion
+                ]
             ]
-        )
+        ]
 
 
-viewLikertSurveyTableRows : LikertQuestion -> List (Html.Html Msg)
 viewLikertSurveyTableRows question =
-    List.map
-        (\answer ->
-            Html.tr [ Html.Attributes.class "ba", Html.Events.onClick NoOp ]
-                (Html.td [] [ Html.text answer.answer ]
-                    :: (List.map
-                            (\choice ->
-                                Html.td
-                                    [ Html.Attributes.class "ba hover-bg-gray"
-                                    ]
-                                    [ Html.div [ Html.Events.onClick (SelectLikertAnswer answer.id choice) ] [ Html.text "click me" ] ]
-                            )
-                            question.choices
-                       )
-                )
-        )
-        question.answers
-
-
-viewLikertSurveyTableHeader : LikertQuestion -> Html.Html Msg
-viewLikertSurveyTableHeader surveyQuestion =
-    Html.tr [ Html.Attributes.class "ba" ]
-        (Html.th [ Html.Attributes.class "ba " ] [ Html.text "Statement" ]
-            :: (List.map
-                    (\choice ->
-                        Html.th [ Html.Attributes.class "ba " ] [ Html.text choice ]
+    tbody []
+        (List.map
+            (\answer ->
+                tr [ class "" ]
+                    (td [] [ text answer.answer ]
+                        :: (List.map
+                                (\choice ->
+                                    td
+                                        [ class ""
+                                        ]
+                                        [ div [ onClick (SelectLikertAnswer answer.id choice) ] [ text "click me" ] ]
+                                )
+                                question.choices
+                           )
                     )
-                    surveyQuestion.choices
-               )
+            )
+            question.answers
         )
 
 
-viewIpsativeSurvey : IpsativeSurvey -> Element Styles variation Msg
+viewLikertSurveyTableHeader : LikertQuestion -> Html Msg
+viewLikertSurveyTableHeader surveyQuestion =
+    thead [ class "thead-light" ]
+        [ tr [ class "" ]
+            (th [ class " " ] [ text "Statement" ]
+                :: (List.map
+                        (\choice ->
+                            th [ class " " ] [ text choice ]
+                        )
+                        surveyQuestion.choices
+                   )
+            )
+        ]
+
+
 viewIpsativeSurvey survey =
-    column None
-        [ spacing 20 ]
+    div [ class "container-fluid" ]
         [ viewIpsativeSurveyTitle survey
+        , br [] []
         , viewIpsativeSurveyBoxes (Zipper.current survey.questions)
+        , br [] []
         , viewSurveyFooter
         ]
 
 
-viewHeader : Element Styles variation Msg
-viewHeader =
-    row NavBarStyle
-        [ spread, paddingXY 80 20 ]
-        [ el Logo [] (Element.text "Elm Haven Survey Prototype")
-        , row None
-            [ spacing 20, verticalCenter ]
-            [ el NavOption [] (Element.text "Instructions")
-            , el NavOption [] (Element.text "Github")
+viewNavbar : Html Msg
+viewNavbar =
+    nav [ class "navbar navbar-expand-lg navbar-light bg-light" ]
+        [ a [ class "navbar-brand", href "#" ]
+            [ text "Haven Survey Prototype" ]
+        , button [ attribute "aria-controls" "navbarSupportedContent", attribute "aria-expanded" "false", attribute "aria-label" "Toggle navigation", class "navbar-toggler", attribute "data-target" "#navbarSupportedContent", attribute "data-toggle" "collapse", type_ "button" ]
+            [ span [ class "navbar-toggler-icon" ]
+                []
+            ]
+        , div [ class "collapse navbar-collapse", id "navbarSupportedContent" ]
+            [ ul [ class "navbar-nav mr-auto" ]
+                [ li [ class "nav-item active" ]
+                    [ a [ class "nav-link", href "#" ]
+                        [ text "Home "
+                        , span [ class "sr-only" ]
+                            [ text "(current)" ]
+                        ]
+                    ]
+                , li [ class "nav-item" ]
+                    [ a [ class "nav-link", href "https://github.com/kindlyops/elm-survey-prototype" ]
+                        [ text "Github" ]
+                    ]
+                ]
             ]
         ]
 
 
-viewLikertSurveyTitle : LikertSurvey -> Element Styles variation Msg
+viewLikertSurveyTitle : LikertSurvey -> Html Msg
 viewLikertSurveyTitle survey =
     let
         currentQuestion =
@@ -565,17 +629,15 @@ viewLikertSurveyTitle survey =
         questionTitle =
             currentQuestion.title
     in
-        row None
-            [ center, paddingTop 20 ]
-            [ column None
-                [ spacing 10 ]
-                [ el None [] (Element.text ("Question " ++ (toString questionNumber) ++ " of " ++ (toString totalQuestions)))
-                , el SurveyQuestionStyle [] (Element.text questionTitle)
+        div [ class "row" ]
+            [ div [ class "col-lg ", style [ ( "text-align", "center" ) ] ]
+                [ h3 [ class "" ] [ text ("Question " ++ (toString questionNumber) ++ " of " ++ (toString totalQuestions)) ]
+                , h4 [] [ text questionTitle ]
                 ]
             ]
 
 
-viewIpsativeSurveyTitle : IpsativeSurvey -> Element Styles variation Msg
+viewIpsativeSurveyTitle : IpsativeSurvey -> Html Msg
 viewIpsativeSurveyTitle survey =
     let
         currentQuestion =
@@ -590,81 +652,91 @@ viewIpsativeSurveyTitle survey =
         questionTitle =
             currentQuestion.title
     in
-        row None
-            [ center, paddingTop 20 ]
-            [ column None
-                [ spacing 10 ]
-                [ el None [] (Element.text ("Question " ++ (toString questionNumber) ++ " of " ++ (toString totalQuestions)))
-                , el SurveyQuestionStyle [] (Element.text questionTitle)
-                , row None
-                    [ spacing 20 ]
-                    (viewPointsLeft currentQuestion.pointsLeft survey.pointsPerQuestion)
+        div [ class "row" ]
+            [ div [ class "col-lg ", style [ ( "text-align", "center" ) ] ]
+                [ h3 [ class "" ] [ text ("Question " ++ (toString questionNumber) ++ " of " ++ (toString totalQuestions)) ]
+                , h4 [] [ text questionTitle ]
+                , div [ class "row" ] (viewPointsLeft currentQuestion.pointsLeft survey.pointsPerQuestion)
                 ]
             ]
 
 
-viewPointsLeft : List Survey.PointsLeft -> Int -> List (Element Styles variation Msg)
+viewPointsLeft : List Survey.PointsLeft -> Int -> List (Html Msg)
 viewPointsLeft pointsLeft pointsPerQuestion =
     List.map
         (\x ->
-            column None
-                []
-                [ Element.text ("Group " ++ (toString x.group) ++ ": " ++ (toString x.pointsLeft) ++ "/" ++ (toString pointsPerQuestion))
-                , row ProgressBarBackground
-                    []
-                    [ el ProgressBar [ width (percent (calculateProgressBarPercent x.pointsLeft pointsPerQuestion)), paddingXY 0 10 ] empty ]
+            div [ class "col-md" ]
+                [ p [] [ text ("Group " ++ (toString x.group) ++ ": " ++ (toString x.pointsLeft) ++ "/" ++ (toString pointsPerQuestion)) ]
+                , div [ class "progress" ]
+                    [ div [ class "progress-bar", style [ (calculateProgressBarPercent x.pointsLeft pointsPerQuestion) ] ] []
+                    ]
                 ]
         )
         pointsLeft
 
 
-calculateProgressBarPercent : Int -> Int -> Float
+calculateProgressBarPercent : Int -> Int -> ( String, String )
 calculateProgressBarPercent current max =
-    100 * ((toFloat current) / (toFloat max))
+    let
+        percent =
+            100 * ((toFloat current) / (toFloat max))
+
+        percentString =
+            toString percent ++ "%"
+    in
+        ( "width", percentString )
 
 
-viewIpsativeSurveyBoxes : IpsativeQuestion -> Element Styles variation Msg
+viewIpsativeSurveyBoxes : IpsativeQuestion -> Html Msg
 viewIpsativeSurveyBoxes surveyQuestion =
-    wrappedRow None
-        [ spacing 10, center ]
-        (List.map (\x -> viewSurveyBox x) surveyQuestion.answers)
+    div [ class "row" ]
+        (List.map
+            (\answer ->
+                viewSurveyBox answer
+            )
+            surveyQuestion.answers
+        )
 
 
-viewSurveyBox : IpsativeAnswer -> Element Styles variation Msg
+viewSurveyBox : IpsativeAnswer -> Html Msg
 viewSurveyBox answer =
-    el None
-        [ width (px 600) ]
-        (column
-            SubQuestionStyle
-            [ paddingBottom 10 ]
-            [ textLayout None [ paddingXY 10 10 ] [ paragraph None [] [ (Element.text answer.answer) ] ]
-            , column None
-                [ center, spacing 20 ]
-                (viewAnswerButtons answer answer.pointsAssigned)
-            ]
-        )
-
-
-viewAnswerButtons answer pointsAssigned =
-    List.map
-        (\x ->
-            row None
-                [ spacing 20 ]
-                [ el None [ verticalCenter ] (Element.text ("Group " ++ toString x.group ++ ":"))
-                , button SubQuestionButton [ paddingXY 20 10, (onClick (DecrementAnswer answer x.group)) ] (Element.text "-")
-                , el None [ verticalCenter ] (Element.text (toString x.points))
-                , button SubQuestionButton [ paddingXY 20 10, (onClick (IncrementAnswer answer x.group)) ] (Element.text "+")
+    div [ class "col-md-6" ]
+        [ div [ class "card mb-4 box-shadow" ]
+            [ div [ class "card-body" ]
+                [ p [ class "card-text" ] [ text answer.answer ]
+                , ul [ class "list-group list-group-flush" ]
+                    (List.map
+                        (\group -> viewSurveyPointsGroup answer group)
+                        answer.pointsAssigned
+                    )
                 ]
-        )
-        pointsAssigned
+            ]
+        ]
 
 
-viewSurveyFooter : Element Styles variation Msg
+viewSurveyPointsGroup answer group =
+    li [ class "list-group-item" ]
+        [ div [ class "row" ]
+            [ div [ class "col-6" ]
+                [ p [ class "card-text" ] [ text ("Group " ++ toString group.group ++ ":") ]
+                , p [ class "card-text" ] [ text ("Points: " ++ toString group.points) ]
+                ]
+            , div [ class "col-6" ]
+                [ button [ class "btn btn-default", onClick (DecrementAnswer answer group.group) ] [ text "-" ]
+                , button [ class "btn btn-default", onClick (IncrementAnswer answer group.group) ] [ text "+" ]
+                ]
+            ]
+        ]
+
+
+viewSurveyFooter : Html Msg
 viewSurveyFooter =
-    row SurveyFooterStyle
-        [ alignRight, spacing 12, paddingRight 40 ]
-        [ button SaveButton [ paddingXY 20 10, onClick GoToInstructions ] (Element.text "Back")
-        , button NavigationButton [ paddingXY 20 10, onClick PreviousQuestion ] (Element.text "<")
-        , button NavigationButton [ paddingXY 20 10, onClick NextQuestion ] (Element.text ">")
-        , button NextButton [ paddingXY 20 10, onClick FinishSurvey ] (Element.text "Finish")
+    div [ class "row " ]
+        [ div [ class "col-md-8" ] []
+        , div [ class "col-md-4 " ]
+            [ button [ class "btn btn-warning", onClick GoToHome ] [ text "Back" ]
+            , button [ class "btn btn-success", onClick PreviousQuestion ] [ text "<" ]
+            , button [ class "btn btn-success", onClick NextQuestion ] [ text ">" ]
+            , button [ class "btn btn-primary", onClick FinishSurvey ] [ text "Finish" ]
+            ]
         ]
