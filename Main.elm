@@ -30,6 +30,7 @@ type Page
     = Home
     | SurveyInstructions
     | Survey
+    | IncompleteSurvey
     | Finished
 
 
@@ -67,6 +68,7 @@ type Msg
     | FinishSurvey
     | GenerateChart
     | SelectLikertAnswer Int String
+    | GotoQuestion Survey Int
 
 
 limitNumberOfGroups : Int -> Int
@@ -116,7 +118,10 @@ update msg model =
             { model | currentPage = Home } ! []
 
         FinishSurvey ->
-            { model | currentPage = Finished } ! []
+            if validateSurvey model.currentSurvey then
+                { model | currentPage = Finished } ! []
+            else
+                { model | currentPage = IncompleteSurvey } ! []
 
         StartLikertSurvey ->
             { model | currentPage = Survey } ! []
@@ -206,6 +211,100 @@ update msg model =
                             model.currentSurvey
             in
                 { model | currentSurvey = newSurvey } ! []
+
+        GotoQuestion survey questionNumber ->
+            case model.currentSurvey of
+                Ipsative survey ->
+                    case Zipper.find (\x -> x.id == questionNumber) survey.questions of
+                        Just x ->
+                            { model | currentSurvey = Ipsative { survey | questions = x }, currentPage = Survey } ! []
+
+                        _ ->
+                            { model | currentSurvey = Ipsative survey } ! []
+
+                Likert survey ->
+                    case Zipper.find (\x -> x.id == questionNumber) survey.questions of
+                        Just x ->
+                            { model | currentSurvey = Likert { survey | questions = x }, currentPage = Survey } ! []
+
+                        _ ->
+                            { model | currentSurvey = Likert survey } ! []
+
+
+validateSurvey : Survey -> Bool
+validateSurvey survey =
+    if List.length (getIncompleteQuestions survey) == 0 then
+        True
+    else
+        False
+
+
+getIncompleteQuestions : Survey -> List Int
+getIncompleteQuestions survey =
+    case survey of
+        Ipsative survey ->
+            --Survey question is good if all the points for all the groups for all the answers is zero
+            List.foldr
+                (\question incompleteQuestions ->
+                    if validateIpsativeQuestion question then
+                        incompleteQuestions
+                    else
+                        question.id :: incompleteQuestions
+                )
+                []
+                (Zipper.toList survey.questions)
+
+        Likert survey ->
+            --Survey question is good if all the answers have a selectedChoice
+            List.foldr
+                (\question incompleteQuestions ->
+                    if validateLikertQuestion question then
+                        incompleteQuestions
+                    else
+                        question.id :: incompleteQuestions
+                )
+                []
+                (Zipper.toList survey.questions)
+
+
+validateLikertQuestion : LikertQuestion -> Bool
+validateLikertQuestion question =
+    let
+        checkedQuestions =
+            List.filterMap
+                (\answer ->
+                    answer.selectedChoice
+                )
+                question.answers
+    in
+        if List.length checkedQuestions == List.length question.answers then
+            True
+        else
+            False
+
+
+validateIpsativeQuestion : IpsativeQuestion -> Bool
+validateIpsativeQuestion question =
+    let
+        checkedQuestions =
+            List.filterMap
+                (\pointsLeft ->
+                    validatePointsLeft pointsLeft
+                )
+                question.pointsLeft
+    in
+        if List.length checkedQuestions == 0 then
+            True
+        else
+            False
+
+
+validatePointsLeft : PointsLeft -> Maybe Bool
+validatePointsLeft pointsLeft =
+    if pointsLeft.pointsLeft == 0 then
+        Nothing
+    else
+        Just False
 
 
 selectLikertAnswer : LikertSurvey -> Int -> String -> LikertSurvey
@@ -388,8 +487,34 @@ viewApp model =
         Survey ->
             viewSurvey model.currentSurvey
 
+        IncompleteSurvey ->
+            viewIncomplete model.currentSurvey
+
         Finished ->
             viewFinished model
+
+
+viewIncomplete : Survey -> Html Msg
+viewIncomplete survey =
+    div [ class "container mt-3" ]
+        [ div [ class "row" ]
+            [ div [ class "jumbotron" ]
+                ([ h1 [ class "display-4" ] [ text "Incomplete Survey" ]
+                 , p [ class "lead" ] [ text "You haven't answered all of the survey questions fully." ]
+                 ]
+                    ++ viewIncompleteButtons survey (getIncompleteQuestions survey)
+                )
+            ]
+        ]
+
+
+viewIncompleteButtons : Survey -> List Int -> List (Html Msg)
+viewIncompleteButtons survey questionNumbers =
+    List.map
+        (\questionNumber ->
+            div [ class "my-2" ] [ button [ class "btn btn-primary", onClick (GotoQuestion survey questionNumber) ] [ text ("Click to go back to question " ++ (toString questionNumber)) ] ]
+        )
+        questionNumbers
 
 
 viewSurveyInstructions : Survey -> Html Msg
