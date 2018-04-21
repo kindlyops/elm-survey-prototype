@@ -2,6 +2,7 @@ module Icons
     exposing
         ( minus
         , plus
+        , check
         )
 
 import Html exposing (Html)
@@ -36,4 +37,11 @@ plus =
     svgFeatherIcon "plus"
         [ Svg.line [ x1 "12", y1 "5", x2 "12", y2 "19" ] []
         , Svg.line [ x1 "5", y1 "12", x2 "19", y2 "12" ] []
+        ]
+
+
+check : Html msg
+check =
+    svgFeatherIcon "check"
+        [ Svg.polyline [ points "20 6 9 17 4 12" ] []
         ]

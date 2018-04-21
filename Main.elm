@@ -550,9 +550,13 @@ viewLikertSurveyTableRows question =
                     (td [] [ text answer.answer ]
                         :: (List.map
                                 (\choice ->
-                                    td [ class (calculateLikertSelectedBackground answer choice), onClick (SelectLikertAnswer answer.id choice) ]
-                                        [ div [ class "" ] []
-                                        ]
+                                    if isLikertSelected answer choice then
+                                        td [ class "bg-success text-white text-center", onClick (SelectLikertAnswer answer.id choice) ]
+                                            [ Icons.check ]
+                                    else
+                                        td [ class "", onClick (SelectLikertAnswer answer.id choice) ]
+                                            [ div [ class "" ] []
+                                            ]
                                 )
                                 question.choices
                            )
@@ -562,17 +566,17 @@ viewLikertSurveyTableRows question =
         )
 
 
-calculateLikertSelectedBackground : LikertAnswer -> String -> String
-calculateLikertSelectedBackground answer choice =
+isLikertSelected : LikertAnswer -> String -> Bool
+isLikertSelected answer choice =
     case answer.selectedChoice of
         Just x ->
             if x == choice then
-                "bg-success"
+                True
             else
-                ""
+                False
 
         Nothing ->
-            ""
+            False
 
 
 viewLikertSurveyTableHeader : LikertQuestion -> Html Msg
