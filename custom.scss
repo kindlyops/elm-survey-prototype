@@ -1,12 +1,13 @@
-// $primary:       #E86953;
-$primary:       #DF515D;
+$primary:       #5AB4AC;
 $secondary:     #D8B365;
-$success:       #5AB4AC;
-// $info:          $cyan;
-// $warning:       $yellow;
-// $danger:        $red;
-// $light:         $gray-100;
-// $dark:          $gray-800;
+
+$yiq-contrasted-threshold:  160;
+
+$btn-border-radius: 0;
+$btn-border-radius-lg: 0;
+$btn-border-radius-sm: 0;
+
+$progress-border-radius: 0;
 
 // Custom.scss
 // Option A: Include all of Bootstrap
