@@ -404,7 +404,7 @@ viewSurveyInstructions survey =
 
 viewIpsativeSurveyInstructions : IpsativeSurvey -> Html Msg
 viewIpsativeSurveyInstructions survey =
-    div [ class "container" ]
+    div [ class "container mt-3" ]
         [ div [ class "row" ]
             [ div
                 [ class "jumbotron" ]
@@ -419,7 +419,7 @@ viewIpsativeSurveyInstructions survey =
 
 viewLikertSurveyInstructions : LikertSurvey -> Html Msg
 viewLikertSurveyInstructions survey =
-    div [ class "container" ]
+    div [ class "container mt-3" ]
         [ div [ class "row" ]
             [ div
                 [ class "jumbotron" ]
