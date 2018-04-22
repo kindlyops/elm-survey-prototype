@@ -215,7 +215,7 @@ update msg model =
         GotoQuestion survey questionNumber ->
             case model.currentSurvey of
                 Ipsative survey ->
-                    case Zipper.find (\x -> x.id == questionNumber) survey.questions of
+                    case Zipper.find (\x -> x.id == questionNumber) (Zipper.first survey.questions) of
                         Just x ->
                             { model | currentSurvey = Ipsative { survey | questions = x }, currentPage = Survey } ! []
 
@@ -223,7 +223,7 @@ update msg model =
                             { model | currentSurvey = Ipsative survey } ! []
 
                 Likert survey ->
-                    case Zipper.find (\x -> x.id == questionNumber) survey.questions of
+                    case Zipper.find (\x -> x.id == questionNumber) (Zipper.first survey.questions) of
                         Just x ->
                             { model | currentSurvey = Likert { survey | questions = x }, currentPage = Survey } ! []
 
