@@ -631,7 +631,20 @@ viewScdsCard survey numberOfGroups =
 
 viewFinished : Model -> Html Msg
 viewFinished model =
-    div [] [ text "You finished the survey!" ]
+    case model.currentSurvey of
+        Ipsative survey ->
+            div [ class "container mt-3" ]
+                [ div [ class "row" ]
+                    [ div [ class "jumbotron" ]
+                        [ h1 [ class "display-4" ] [ text "You finished the survey!" ]
+                        , button [ class "btn btn-primary", onClick GenerateChart ] [ text "Click to generate radar chart of results." ]
+                        , canvas [ id "chart" ] []
+                        ]
+                    ]
+                ]
+
+        Likert survey ->
+            div [] [ text "You finished the survey!" ]
 
 
 viewSurvey : Survey -> Html Msg
