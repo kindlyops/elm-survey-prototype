@@ -49,3 +49,7 @@ You should buy the book, it's very good.
 ### Verification Page
 
 ![Verification Page](https://github.com/kindlyops/elm-survey-prototype/raw/master/doc/5.png)
+
+### Radar Chart
+
+![Radar Chart](https://github.com/kindlyops/elm-survey-prototype/raw/master/doc/6.png)
