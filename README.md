@@ -10,6 +10,8 @@ This project was made to prototype out an [Ipsative](https://en.wikipedia.org/wi
 
 `npm i`
 
+`npm run build_bootstrap`
+
 `npm run start`
 
 ## Demo Gif
